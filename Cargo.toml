@@ -1,0 +1,16 @@
+[package]
+name = "driver_base"
+version = "0.0.1"
+edition = "2021"
+# https://codentium.com/guides/windows-dev/
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[dependencies]

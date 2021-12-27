@@ -1,0 +1,57 @@
+# cargo install cargo-make
+
+[env.development]
+TARGET_PATH = "target/x86_64-pc-windows-msvc/debug"
+
+[env.production]
+TARGET_PATH = "target/x86_64-pc-windows-msvc/release"
+BUILD_RELEASE = "--release"
+
+[env] # fixup year as needed for your VS install
+VC_BUILD_DIR="C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat"
+PRJ_NAME="driver_base" # from cargo.toml["package.name"]
+SVC_NAME="rust_driver" # sc start %SVC_NAME%
+SVC_DISPLAY="Rust Driver" # name within Serivces.exe \ TaskMgr
+
+[tasks.build-driver]
+script = '''
+cargo build %BUILD_FLAGS%
+'''
+
+[tasks.rename]
+dependencies = ["build-driver"]
+ignore_errors = true
+script = '''
+cd %TARGET_PATH%
+copy %PRJ_NAME%.dll %PRJ_NAME%.sys
+'''
+
+[tasks.sign]
+# https://docs.microsoft.com/en-us/windows-hardware/drivers/install/creating-test-certificates
+# https://docs.microsoft.com/en-us/windows-hardware/drivers/install/test-signing-a-driver-through-an-embedded-signature
+dependencies = ["rename"]
+script = '''
+call "%VC_BUILD_DIR%"
+if not exist DriverCertificate.cer (
+    makecert -r -pe -ss PrivateCertStore -n CN=DriverCertificate -eku 1.3.6.1.5.5.7.3.3 DriverCertificate.cer
+) else (
+    echo Certificate already exists.
+)
+signtool sign /a /v /fd sha256 /s PrivateCertStore /n DriverCertificate /t http://timestamp.digicert.com %TARGET_PATH%/%PRJ_NAME%.sys
+'''
+
+[tasks.install]
+# https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/sc-create
+dependencies = ["sign"]
+script = '''
+cd %TARGET_PATH%
+set DRV=%cd%\%PRJ_NAME%.sys
+sc create %SVC_NAME% type= kernel start= demand error= normal binpath= "%DRV%" displayname= "%SVC_DISPLAY%"
+'''
+
+[tasks.start]
+# https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc742126(v=ws.11)
+dependencies = ["install"]
+script = '''
+sc start %SVC_NAME%
+'''
