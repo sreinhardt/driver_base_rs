@@ -30,7 +30,10 @@ To build and simplify deployment, cargo make options are:
   * Executes `sc create` command to create a new service for `%package.name%.sys`.
 * start
   * Executes `sc start` command to start created service.
-
+* stop
+  * Executes `sc stop` command to stop started service.
+* delete
+  * Executes `sc delete` command to delete stopped service.
 
 * 1 - https://not-matthias.github.io/kernel-driver-with-rust/
 * 2 - https://codentium.com/guides/windows-dev/
